@@ -1,0 +1,8 @@
+# Climate Analytics - Raw NetCDF Preprocessing & Validation Requirements
+xarray>=2024.01.0
+numpy>=1.26.0
+pandas>=2.2.0
+netCDF4>=1.6.5
+scipy>=1.12.0
+geopandas>=0.14.0
+shapely>=2.0.0
