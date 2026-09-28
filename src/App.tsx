@@ -7,19 +7,27 @@ import { LoginPage } from './features/auth/LoginPage';
 import { AppShell } from './components/layout/AppShell';
 
 import { DashboardPage } from './features/dashboard/DashboardPage';
-import { RainfallLayout } from './features/rainfall/RainfallLayout';
-import { EventAnalyzerPage as RainEventPage } from './features/rainfall/EventAnalyzerPage';
-import { YearlyCountsPage as RainYearlyPage } from './features/rainfall/YearlyCountsPage';
-import { TrendPage as RainTrendPage } from './features/rainfall/TrendPage';
-import { VisualizationPage as RainVizPage } from './features/rainfall/VisualizationPage';
 
-import { TemperatureLayout } from './features/temperature/TemperatureLayout';
-import { TempEventAnalyzerPage } from './features/temperature/TempEventAnalyzerPage';
-import { HotDaysPage } from './features/temperature/HotDaysPage';
-import { TempVisualizationPage } from './features/temperature/TempVisualizationPage';
+// Route-level code splitting for heavy sub-modules
+const RainfallLayout = React.lazy(() => import('./features/rainfall/RainfallLayout').then((m) => ({ default: m.RainfallLayout })));
+const RainEventPage = React.lazy(() => import('./features/rainfall/EventAnalyzerPage').then((m) => ({ default: m.EventAnalyzerPage })));
+const RainYearlyPage = React.lazy(() => import('./features/rainfall/YearlyCountsPage').then((m) => ({ default: m.YearlyCountsPage })));
+const RainTrendPage = React.lazy(() => import('./features/rainfall/TrendPage').then((m) => ({ default: m.TrendPage })));
+const RainVizPage = React.lazy(() => import('./features/rainfall/VisualizationPage').then((m) => ({ default: m.VisualizationPage })));
 
-import { CropDashboardPage } from './features/crop/CropDashboardPage';
-import { SettingsPage } from './features/settings/SettingsPage';
+const TemperatureLayout = React.lazy(() => import('./features/temperature/TemperatureLayout').then((m) => ({ default: m.TemperatureLayout })));
+const TempEventAnalyzerPage = React.lazy(() => import('./features/temperature/TempEventAnalyzerPage').then((m) => ({ default: m.TempEventAnalyzerPage })));
+const HotDaysPage = React.lazy(() => import('./features/temperature/HotDaysPage').then((m) => ({ default: m.HotDaysPage })));
+const TempVisualizationPage = React.lazy(() => import('./features/temperature/TempVisualizationPage').then((m) => ({ default: m.TempVisualizationPage })));
+
+const CropDashboardPage = React.lazy(() => import('./features/crop/CropDashboardPage').then((m) => ({ default: m.CropDashboardPage })));
+const SettingsPage = React.lazy(() => import('./features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })));
+
+const PageLoadingFallback: React.FC = () => (
+  <div style={{ padding: '48px 24px', textAlign: 'center', color: '#64748B', fontSize: 14 }}>
+    Loading analytics view...
+  </div>
+);
 
 export const App: React.FC = () => {
   return (

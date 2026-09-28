@@ -175,10 +175,27 @@ export const Topbar: React.FC = () => {
                 fontWeight: active ? 600 : 500,
                 color: active ? '#2563EB' : '#4B5563',
                 transition: 'color 0.15s ease',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 6,
               };
             }}
           >
-            Crop Dashboard
+            <span>Crop Dashboard</span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                background: '#FEF3C7',
+                color: '#92400E',
+                padding: '1px 6px',
+                borderRadius: 9999,
+                border: '1px solid #FDE68A',
+                letterSpacing: '0.02em',
+              }}
+            >
+              PHASE 2
+            </span>
           </NavLink>
         </nav>
 
@@ -375,7 +392,12 @@ export const Topbar: React.FC = () => {
           <NavLink to="/dashboard" className="ca-mobile-link">Home</NavLink>
           <NavLink to="/rainfall/events" className="ca-mobile-link">Rainfall Analysis</NavLink>
           <NavLink to="/temperature/events" className="ca-mobile-link">Temperature Analysis</NavLink>
-          <NavLink to="/crop-dashboard" className="ca-mobile-link">Crop Dashboard</NavLink>
+          <NavLink to="/crop-dashboard" className="ca-mobile-link" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span>Crop Dashboard</span>
+            <span style={{ fontSize: 10, fontWeight: 700, background: '#FEF3C7', color: '#92400E', padding: '1px 6px', borderRadius: 9999, border: '1px solid #FDE68A' }}>
+              PHASE 2
+            </span>
+          </NavLink>
           <NavLink to="/settings" className="ca-mobile-link">Settings</NavLink>
         </div>
       )}

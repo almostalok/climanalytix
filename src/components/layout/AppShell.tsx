@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Topbar } from './Topbar';
 import { Footer } from './Footer';
@@ -27,7 +27,15 @@ export const AppShell: React.FC = () => {
           margin: '0 auto',
         }}
       >
-        <Outlet />
+        <Suspense
+          fallback={
+            <div style={{ padding: '48px 24px', textAlign: 'center', color: '#64748B', fontSize: 14 }}>
+              Loading analytics view...
+            </div>
+          }
+        >
+          <Outlet />
+        </Suspense>
       </main>
 
       {/* Footer */}

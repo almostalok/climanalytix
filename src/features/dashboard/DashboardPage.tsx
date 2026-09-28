@@ -234,20 +234,35 @@ export const DashboardPage: React.FC = () => {
           }}
         >
           <div>
-            <div
-              style={{
-                width: 48,
-                height: 48,
-                borderRadius: 12,
-                background: '#ECFDF5',
-                color: '#10B981',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginBottom: 20,
-              }}
-            >
-              <Sprout size={26} />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+              <div
+                style={{
+                  width: 48,
+                  height: 48,
+                  borderRadius: 12,
+                  background: '#ECFDF5',
+                  color: '#10B981',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                }}
+              >
+                <Sprout size={26} />
+              </div>
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  background: '#FEF3C7',
+                  color: '#92400E',
+                  padding: '3px 10px',
+                  borderRadius: 9999,
+                  border: '1px solid #FDE68A',
+                  letterSpacing: '0.04em',
+                }}
+              >
+                PHASE 2 PREVIEW
+              </span>
             </div>
 
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>
@@ -255,14 +270,14 @@ export const DashboardPage: React.FC = () => {
             </h3>
 
             <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.6, marginBottom: 24 }}>
-              Comprehensive crop insurance intelligence covering district coverage, sowing and harvest progress,
-              historical drought (1901–2020), and cyclone risk correlations.
+              Demonstrator preview for future agro-insurance intelligence covering district coverage, sowing and harvest progress,
+              historical drought (1901–2020), and cyclone risk correlations (planned for Phase 2).
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                <span>11 Agro-Insurance & Yield Modules</span>
+                <span>11 Agro-Insurance & Yield Demonstrator Modules</span>
               </div>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
@@ -270,7 +285,7 @@ export const DashboardPage: React.FC = () => {
               </div>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                <span>Cyclone exposure & yield correlation</span>
+                <span>Phase 2 pipeline: Non-MVP demonstrator</span>
               </div>
             </div>
           </div>
@@ -293,7 +308,7 @@ export const DashboardPage: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            <span>Explore Crop Analytics</span>
+            <span>Explore Crop Analytics (Phase 2)</span>
             <ArrowRight size={16} />
           </button>
         </div>

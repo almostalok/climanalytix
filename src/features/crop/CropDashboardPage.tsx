@@ -207,6 +207,44 @@ export const CropDashboardPage: React.FC = () => {
       }}
     >
       {/* ============================================================== */}
+      {/* PHASE 2 PREVIEW MANDATORY DISCLAIMER BANNER                   */}
+      {/* ============================================================== */}
+      <div
+        style={{
+          background: '#FEF3C7',
+          borderBottom: '1px solid #FDE68A',
+          padding: '10px 20px',
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          fontSize: 12,
+          color: '#92400E',
+          gap: 10,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <span
+            style={{
+              background: '#D97706',
+              color: '#FFFFFF',
+              fontWeight: 700,
+              fontSize: 11,
+              padding: '2px 8px',
+              borderRadius: 4,
+              letterSpacing: '0.04em',
+            }}
+          >
+            PHASE 2 PREVIEW
+          </span>
+          <span>
+            <strong>Notice:</strong> Crop intelligence capabilities are planned for a subsequent release and are not part of the current MVP. All displayed agro-insurance yields, loss ratios, and drought matrices are demonstrator / preview models.
+          </span>
+        </div>
+        <span style={{ fontSize: 11, color: '#B45309', fontWeight: 600 }}>Non-Contractual MVP Scope</span>
+      </div>
+
+      {/* ============================================================== */}
       {/* 1. TOP POWERBI-STYLE HEADER BAR                                */}
       {/* ============================================================== */}
       <div
@@ -247,6 +285,19 @@ export const CropDashboardPage: React.FC = () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16, fontWeight: 800, color: '#38BDF8', letterSpacing: '-0.01em' }}>
               Crop Insurance Dashboard
+            </span>
+            <span
+              style={{
+                fontSize: 10,
+                fontWeight: 700,
+                background: 'rgba(245, 158, 11, 0.2)',
+                color: '#FBBF24',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                padding: '1px 6px',
+                borderRadius: 4,
+              }}
+            >
+              PHASE 2
             </span>
             {currentView === 'module' && (
               <>

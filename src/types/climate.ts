@@ -43,6 +43,7 @@ export interface YearlyEventCount {
   refGrid: string;
   eventCount: number;
   totalRainfall?: number;
+  totalValue?: number;
   avgDurationDays?: number;
 }
 
@@ -57,7 +58,8 @@ export interface TrendStatistics {
   min: number;
   max: number;
   avg: number;
-  total: number;
+  total?: number;
+  stdDev?: number;
   count: number;
 }
 

@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useClimate } from '../../store/ClimateContext';
-import { FilterPanel } from '../../components/filters/FilterPanel';
 import { QuerySummary } from '../../components/analytics/QuerySummary';
 import { TrendChart } from '../../components/charts/TrendChart';
 import { ExportButton } from '../../components/analytics/ExportButton';
 import { CSVColumn } from '../../packages/climate-engine/csv';
-import { climateDataProvider } from '../../data/MockClimateDataProvider';
+import { climateDataProvider } from '../../data/createClimateDataProvider';
 import { TimeSeriesDataPoint } from '../../types/climate';
 
 export const TrendPage: React.FC = () => {
@@ -37,15 +36,14 @@ export const TrendPage: React.FC = () => {
 
   const csvColumns: CSVColumn<TimeSeriesDataPoint>[] = [
     { key: 'date', header: 'Date' },
-    { key: 'value', header: 'Precipitation (mm)' },
+    { key: 'value', header: 'Rainfall (mm)' },
     { key: 'lat', header: 'Latitude' },
     { key: 'lon', header: 'Longitude' },
     { key: 'refGrid', header: 'Ref Grid' },
   ];
 
   return (
-    <div>
-      <FilterPanel variable="rainfall" onAnalyze={loadData} showCriteria={false} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <QuerySummary variable="rainfall" />
 
       {/* Primary Trend Area Chart with Min/Max/Avg/Total statistics */}

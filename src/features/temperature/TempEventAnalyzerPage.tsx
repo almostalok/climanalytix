@@ -8,7 +8,7 @@ import { TrendChart } from '../../components/charts/TrendChart';
 import { CSVColumn } from '../../packages/climate-engine/csv';
 import { findEvents } from '../../packages/climate-engine/events';
 import { calculateYearlyEventCounts } from '../../packages/climate-engine/yearly';
-import { climateDataProvider } from '../../data/MockClimateDataProvider';
+import { climateDataProvider } from '../../data/createClimateDataProvider';
 import { ClimateEvent, TimeSeriesDataPoint, YearlyEventCount } from '../../types/climate';
 import { Activity, Clock, Flame, Thermometer } from 'lucide-react';
 

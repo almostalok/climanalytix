@@ -26,13 +26,17 @@ export function calculateYearlyEventCounts(events: ClimateEvent[]): YearlyEventC
     map.set(key, existing);
   }
 
-  const results: YearlyEventCount[] = Array.from(map.values()).map((item) => ({
-    year: item.year,
-    refGrid: item.refGrid,
-    eventCount: item.count,
-    totalRainfall: Math.round(item.totalVal * 10) / 10,
-    avgDurationDays: Math.round((item.totalDuration / item.count) * 10) / 10,
-  }));
+  const results: YearlyEventCount[] = Array.from(map.values()).map((item) => {
+    const rounded = Math.round(item.totalVal * 10) / 10;
+    return {
+      year: item.year,
+      refGrid: item.refGrid,
+      eventCount: item.count,
+      totalRainfall: rounded,
+      totalValue: rounded,
+      avgDurationDays: Math.round((item.totalDuration / item.count) * 10) / 10,
+    };
+  });
 
   // Sort ascending by year
   results.sort((a, b) => a.year - b.year);

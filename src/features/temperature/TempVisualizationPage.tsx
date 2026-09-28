@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useClimate } from '../../store/ClimateContext';
 import { SynchronizedMaps } from '../../components/maps/SynchronizedMaps';
-import { climateDataProvider } from '../../data/MockClimateDataProvider';
+import { climateDataProvider } from '../../data/createClimateDataProvider';
 import { DailyGridPoint } from '../../types/provider';
 import { NormalPeriod } from '../../types/climate';
 import { MapPin } from 'lucide-react';

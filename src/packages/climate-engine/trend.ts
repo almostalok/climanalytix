@@ -26,7 +26,7 @@ export function calculateTrend(
 
     return {
       data,
-      stats: computeStatistics(data.map((d) => d.value)),
+      stats: computeStatistics(data.map((d) => d.value), isRainfall),
     };
   }
 
@@ -44,7 +44,7 @@ export function calculateTrend(
   const data: TrendDataPoint[] = Array.from(groupMap.entries())
     .sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
     .map(([key, item]) => {
-      // For rainfall: total precipitation in the month/year
+      // For rainfall: total rainfall in the month/year
       // For temperature: average temperature in the month/year
       const val = isRainfall ? item.sum : item.sum / item.count;
       return {
@@ -55,37 +55,62 @@ export function calculateTrend(
       };
     });
 
+  // Compute statistics over the underlying daily series for authentic extremes
   return {
     data,
-    stats: computeStatistics(data.map((d) => d.value)),
+    stats: computeStatistics(series.map((d) => d.value), isRainfall),
   };
 }
 
 /**
- * Computes min, max, avg, total statistics over an array of numbers.
+ * Computes min, max, avg, (total for rainfall, stdDev for temperature) over an array of numbers.
+ * Temperature deliberately does NOT calculate a cumulative total.
  */
-export function computeStatistics(values: number[]): TrendStatistics {
+export function computeStatistics(values: number[], isRainfall: boolean = true): TrendStatistics {
   if (!values || values.length === 0) {
-    return { min: 0, max: 0, avg: 0, total: 0, count: 0 };
+    return {
+      min: 0,
+      max: 0,
+      avg: 0,
+      ...(isRainfall ? { total: 0 } : {}),
+      count: 0,
+    };
   }
 
   let min = values[0];
   let max = values[0];
-  let total = 0;
+  let sum = 0;
 
   for (const v of values) {
     if (v < min) min = v;
     if (v > max) max = v;
-    total += v;
+    sum += v;
   }
 
-  const avg = total / values.length;
+  const avg = sum / values.length;
+
+  if (isRainfall) {
+    return {
+      min: Math.round(min * 10) / 10,
+      max: Math.round(max * 10) / 10,
+      avg: Math.round(avg * 10) / 10,
+      total: Math.round(sum * 10) / 10,
+      count: values.length,
+    };
+  }
+
+  // Temperature: compute standard deviation, NEVER compute cumulative total
+  let varianceSum = 0;
+  for (const v of values) {
+    varianceSum += (v - avg) * (v - avg);
+  }
+  const stdDev = Math.sqrt(varianceSum / values.length);
 
   return {
     min: Math.round(min * 10) / 10,
     max: Math.round(max * 10) / 10,
     avg: Math.round(avg * 10) / 10,
-    total: Math.round(total * 10) / 10,
+    stdDev: Math.round(stdDev * 10) / 10,
     count: values.length,
   };
 }

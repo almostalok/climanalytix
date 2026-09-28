@@ -6,10 +6,11 @@ import { ExportButton } from '../../components/analytics/ExportButton';
 import { SynchronizedMaps } from '../../components/maps/SynchronizedMaps';
 import { CSVColumn } from '../../packages/climate-engine/csv';
 import { findHotDays } from '../../packages/climate-engine/hotDays';
-import { climateDataProvider } from '../../data/MockClimateDataProvider';
+import { climateDataProvider } from '../../data/createClimateDataProvider';
 import { DailyGridPoint } from '../../types/provider';
 import { HotDaysResult, NormalPeriod } from '../../types/climate';
 import { Flame, Clock, Thermometer, MapPin } from 'lucide-react';
+import { resolveHotDaysMapDate } from './hotDaysUtils';
 
 export const HotDaysPage: React.FC = () => {
   const {
@@ -35,6 +36,9 @@ export const HotDaysPage: React.FC = () => {
   const [gridPoints, setGridPoints] = useState<DailyGridPoint[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const [selectedMapDate, setSelectedMapDate] = useState<string>('');
+  const [mapObservationDate, setMapObservationDate] = useState<string>(startDate);
+
   const [customLat, setCustomLat] = useState<string>(pointLat.toString());
   const [customLon, setCustomLon] = useState<string>(pointLon.toString());
 
@@ -52,35 +56,54 @@ export const HotDaysPage: React.FC = () => {
   const runAnalysis = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [seriesData, gridSnapshot] = await Promise.all([
-        climateDataProvider.getTimeSeries({
-          dataset: selectedDataset,
-          gridId: resolvedGridCell.id,
-          variable: 'temperature',
-          startDate,
-          endDate,
-        }),
-        climateDataProvider.getDailyGrid({
-          dataset: selectedDataset,
-          variable: 'temperature',
-          date: '2024-05-25',
-          normalPeriod,
-        }),
-      ]);
+      const seriesData = await climateDataProvider.getTimeSeries({
+        dataset: selectedDataset,
+        gridId: resolvedGridCell.id,
+        variable: 'temperature',
+        startDate,
+        endDate,
+      });
 
       const res = findHotDays(seriesData, tempThreshold);
       setHotDaysResult(res);
+
+      const targetDate = resolveHotDaysMapDate(startDate, endDate, res.days, selectedMapDate);
+      setMapObservationDate(targetDate);
+
+      const gridSnapshot = await climateDataProvider.getDailyGrid({
+        dataset: selectedDataset,
+        variable: 'temperature',
+        date: targetDate,
+        normalPeriod,
+      });
+
       setGridPoints(gridSnapshot.cells);
     } catch {
       // Error handling
     } finally {
       setIsLoading(false);
     }
-  }, [selectedDataset, resolvedGridCell.id, startDate, endDate, tempThreshold, normalPeriod, analysisTrigger]);
+  }, [selectedDataset, resolvedGridCell.id, startDate, endDate, tempThreshold, normalPeriod, analysisTrigger, selectedMapDate]);
 
   useEffect(() => {
     runAnalysis();
   }, [runAnalysis]);
+
+  const handleMapDateChange = async (newDate: string) => {
+    setSelectedMapDate(newDate);
+    setMapObservationDate(newDate);
+    try {
+      const gridSnapshot = await climateDataProvider.getDailyGrid({
+        dataset: selectedDataset,
+        variable: 'temperature',
+        date: newDate,
+        normalPeriod,
+      });
+      setGridPoints(gridSnapshot.cells);
+    } catch {
+      // Error handling
+    }
+  };
 
   const handleMapClick = (lat: number, lon: number) => {
     setPoint(lat, lon);
@@ -215,6 +238,20 @@ export const HotDaysPage: React.FC = () => {
           </button>
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>Observation Date:</span>
+            <input
+              type="date"
+              value={mapObservationDate}
+              min={startDate}
+              max={endDate}
+              onChange={(e) => handleMapDateChange(e.target.value)}
+              className="ca-input"
+              style={{ height: 34, fontSize: 12, width: 'auto' }}
+              title="Observation date for GIS map synchronization"
+            />
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span style={{ fontSize: 12, color: '#6B7280', fontWeight: 500 }}>Normal Period:</span>
             <select
               value={normalPeriod}
@@ -240,7 +277,7 @@ export const HotDaysPage: React.FC = () => {
             border: '1px solid #FDE68A',
           }}
         >
-          Target: <strong>{resolvedGridCell.id}</strong> ({resolvedGridCell.lat.toFixed(2)}°N, {resolvedGridCell.lon.toFixed(2)}°E)
+          Target: <strong>{resolvedGridCell.id}</strong> ({resolvedGridCell.lat.toFixed(2)}°N, {resolvedGridCell.lon.toFixed(2)}°E) • Map: <strong>{mapObservationDate}</strong>
         </div>
       </div>
 
@@ -248,11 +285,11 @@ export const HotDaysPage: React.FC = () => {
       <SynchronizedMaps
         variable="temperature"
         dataset={selectedDataset}
-        date={startDate}
+        date={mapObservationDate}
         gridPoints={gridPoints}
         selectedGridId={resolvedGridCell.id}
         onMapClick={handleMapClick}
-        unit="days"
+        unit="°C"
       />
 
       {/* 3. Metric KPI Cards */}

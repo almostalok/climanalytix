@@ -24,7 +24,27 @@ function getCellSeed(cell: GridCell, year: number, dataset: Dataset): number {
 }
 
 /**
+ * Parses YYYY-MM-DD string into UTC epoch milliseconds.
+ */
+export function parseDateToUTC(dateStr: string): number {
+  const parts = dateStr.split('-').map((v) => parseInt(v, 10));
+  return Date.UTC(parts[0], parts[1] - 1, parts[2]);
+}
+
+/**
+ * Formats UTC epoch milliseconds into YYYY-MM-DD calendar date string.
+ */
+export function formatUTCDate(utcMs: number): string {
+  const d = new Date(utcMs);
+  const y = d.getUTCFullYear();
+  const m = String(d.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(d.getUTCDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/**
  * Generates continuous daily time series for a grid cell between startDate and endDate.
+ * Uses pure UTC calendar date arithmetic to ensure zero timezone distortion.
  */
 export function generateDailySeriesForGrid(
   cell: GridCell,
@@ -35,8 +55,9 @@ export function generateDailySeriesForGrid(
 ): TimeSeriesDataPoint[] {
   const result: TimeSeriesDataPoint[] = [];
 
-  const start = new Date(startDateStr);
-  const end = new Date(endDateStr);
+  const startMs = parseDateToUTC(startDateStr);
+  const endMs = parseDateToUTC(endDateStr);
+  const DAY_MS = 86400000;
 
   const isRain = variable === 'rainfall';
   const unit = isRain ? 'mm' : '°C';
@@ -48,15 +69,14 @@ export function generateDailySeriesForGrid(
   const isCoastal = lon > 85 || (lat < 20 && lon < 74) || (lat < 14 && lon > 79);
   const isArid = lon < 76 && lat > 24; // Rajasthan
 
-  let curr = new Date(start);
+  for (let currentMs = startMs; currentMs <= endMs; currentMs += DAY_MS) {
+    const curr = new Date(currentMs);
+    const year = curr.getUTCFullYear();
+    const month = curr.getUTCMonth() + 1; // 1-12
+    const dateStr = formatUTCDate(currentMs);
 
-  while (curr <= end) {
-    const year = curr.getFullYear();
-    const month = curr.getMonth() + 1; // 1-12
-    const day = curr.getDate();
-    const dayOfYear = Math.floor((curr.getTime() - new Date(year, 0, 0).getTime()) / 86400000);
-
-    const dateStr = curr.toISOString().split('T')[0];
+    const yearStartMs = Date.UTC(year, 0, 1);
+    const dayOfYear = Math.floor((currentMs - yearStartMs) / DAY_MS) + 1;
 
     // Daily deterministic random generator
     const seed = getCellSeed(cell, year, dataset) + dayOfYear * 1337;
@@ -150,8 +170,6 @@ export function generateDailySeriesForGrid(
       lon: cell.lon,
       refGrid: cell.id,
     });
-
-    curr.setDate(curr.getDate() + 1);
   }
 
   return result;

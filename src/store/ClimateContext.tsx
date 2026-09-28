@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import { ClimateVariable, Dataset, DatasetMetadata, ComparisonOperator } from '../types/climate';
 import { GridCell, Region } from '../types/geo';
-import { climateDataProvider } from '../data/MockClimateDataProvider';
+import { climateDataProvider } from '../data/createClimateDataProvider';
 import { findNearestGridCell } from '../packages/climate-engine/grid';
 
 interface ClimateContextType {

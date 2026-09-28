@@ -135,7 +135,7 @@ export const TrendChart: React.FC<TrendChartProps> = ({ series, variable, isLoad
                       >
                         <div style={{ color: '#6B7280', marginBottom: 2 }}>{label}</div>
                         <div style={{ fontWeight: 600, color: strokeColor }}>
-                          {isRain ? 'Precipitation' : 'Max Temperature'}: {payload[0].value} {unit}
+                          {isRain ? 'Rainfall' : 'Max Temperature'}: {payload[0].value} {unit}
                         </div>
                       </div>
                     );
@@ -191,10 +191,14 @@ export const TrendChart: React.FC<TrendChartProps> = ({ series, variable, isLoad
 
           <div>
             <div style={{ fontSize: 11, color: '#667085', textTransform: 'uppercase' }}>
-              {isRain ? 'Total Precipitation' : 'Records Analyzed'}
+              {isRain ? 'Total Rainfall' : 'Std Deviation (±)'}
             </div>
             <div style={{ fontSize: 18, fontWeight: 700, color: '#111827', fontFamily: 'var(--font-mono)' }}>
-              {isRain ? `${stats.total} mm` : `${stats.count} days`}
+              {isRain
+                ? `${stats.total ?? 0} mm`
+                : stats.stdDev !== undefined
+                ? `±${stats.stdDev} °C`
+                : `${stats.count} days`}
             </div>
           </div>
         </div>

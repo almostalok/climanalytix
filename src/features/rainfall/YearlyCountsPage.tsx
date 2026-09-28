@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useClimate } from '../../store/ClimateContext';
-import { FilterPanel } from '../../components/filters/FilterPanel';
 import { QuerySummary } from '../../components/analytics/QuerySummary';
 import { YearlyEventChart } from '../../components/charts/YearlyEventChart';
 import { ResultsTable, ColumnDef } from '../../components/analytics/ResultsTable';
@@ -8,7 +7,7 @@ import { ExportButton } from '../../components/analytics/ExportButton';
 import { CSVColumn } from '../../packages/climate-engine/csv';
 import { findEvents } from '../../packages/climate-engine/events';
 import { calculateYearlyEventCounts } from '../../packages/climate-engine/yearly';
-import { climateDataProvider } from '../../data/MockClimateDataProvider';
+import { climateDataProvider } from '../../data/createClimateDataProvider';
 import { YearlyEventCount } from '../../types/climate';
 
 export const YearlyCountsPage: React.FC = () => {
@@ -82,7 +81,7 @@ export const YearlyCountsPage: React.FC = () => {
       header: 'Total Event Rainfall',
       sortable: true,
       align: 'right',
-      render: (r) => <span>{r.totalRainfall} mm</span>,
+      render: (r) => <span>{r.totalRainfall ?? r.totalValue} mm</span>,
     },
     {
       key: 'avgDurationDays',
@@ -102,8 +101,7 @@ export const YearlyCountsPage: React.FC = () => {
   ];
 
   return (
-    <div>
-      <FilterPanel variable="rainfall" onAnalyze={runAnalysis} showCriteria={true} />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <QuerySummary variable="rainfall" eventsCount={totalEvents} />
 
       {/* Primary Bar Chart */}
