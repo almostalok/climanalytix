@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShieldAlert,
   CloudRain,
@@ -20,7 +20,10 @@ import {
   Building2,
   ArrowRight,
   Maximize2,
+  MapPin,
 } from 'lucide-react';
+import { CropMap } from '../../components/maps/CropMap';
+import { generateDistrictCropData, CropMetricParameter, DistrictCropRecord } from './cropData';
 import {
   ResponsiveContainer,
   BarChart,
@@ -57,8 +60,10 @@ export const CropDashboardPage: React.FC = () => {
   const [selectedState, setSelectedState] = useState<string>('Uttar Pradesh');
   const [selectedInsurer, setSelectedInsurer] = useState<string>('All Insurers');
   const [selectedScheme, setSelectedScheme] = useState<string>('PMFBY');
-  const [viewType, setViewType] = useState<'graph' | 'table'>('graph');
+  const [viewType, setViewType] = useState<'map' | 'graph' | 'table'>('map');
   const [metricMode, setMetricMode] = useState<'premium' | 'sum_insured'>('premium');
+  const [activeMapParam, setActiveMapParam] = useState<CropMetricParameter>('premium');
+  const [selectedDistrict, setSelectedDistrict] = useState<DistrictCropRecord | null>(null);
 
   const modules: CropModuleDef[] = [
     {
@@ -175,23 +180,52 @@ export const CropDashboardPage: React.FC = () => {
 
   const currentModule = modules.find((m) => m.id === activeModuleId) || modules[0];
 
-  const insurerMarketData = [
-    { name: 'Agriculture Insurance Co. (AIC)', premium: 4820, share: 38.6, color: '#2563EB' },
-    { name: 'HDFC ERGO General', premium: 2450, share: 19.6, color: '#10B981' },
-    { name: 'Bajaj Allianz General', premium: 1890, share: 15.1, color: '#F59E0B' },
-    { name: 'ICICI Lombard', premium: 1420, share: 11.4, color: '#8B5CF6' },
-    { name: 'SBI General Insurance', premium: 1120, share: 9.0, color: '#EC4899' },
-    { name: 'Others (Private Consortium)', premium: 780, share: 6.3, color: '#64748B' },
-  ];
+  // Dynamic district-level underwriting and risk data matching reference portal
+  const districtData = useMemo(() => {
+    return generateDistrictCropData(
+      selectedState,
+      selectedYear,
+      selectedSeason as any,
+      selectedInsurer,
+      selectedScheme as any
+    );
+  }, [selectedState, selectedYear, selectedSeason, selectedInsurer, selectedScheme]);
 
-  const districtCoverageData = [
-    { district: 'Gautam Buddha Nagar', sumInsured: 1450, grossPremium: 188.5, farmers: 64200, claimRatio: 42.1 },
-    { district: 'Bulandshahr', sumInsured: 2180, grossPremium: 283.4, farmers: 98400, claimRatio: 51.4 },
-    { district: 'Aligarh', sumInsured: 1940, grossPremium: 252.2, farmers: 87100, claimRatio: 38.9 },
-    { district: 'Mathura', sumInsured: 2420, grossPremium: 314.6, farmers: 112000, claimRatio: 64.2 },
-    { district: 'Agra', sumInsured: 1810, grossPremium: 235.3, farmers: 79500, claimRatio: 47.8 },
-    { district: 'Meerut', sumInsured: 1650, grossPremium: 214.5, farmers: 71300, claimRatio: 36.5 },
-  ];
+  // Aggregated totals dynamically computed from active filters
+  const totalGrossPremium = useMemo(
+    () => Math.round(districtData.reduce((acc, d) => acc + d.grossPremium, 0)),
+    [districtData]
+  );
+  const totalSumInsured = useMemo(
+    () => Math.round(districtData.reduce((acc, d) => acc + d.sumInsured, 0)),
+    [districtData]
+  );
+  const totalFarmers = useMemo(
+    () => districtData.reduce((acc, d) => acc + d.farmers, 0),
+    [districtData]
+  );
+  const avgClaimRatio = useMemo(
+    () =>
+      districtData.length > 0
+        ? Math.round(districtData.reduce((acc, d) => acc + d.claimRatio, 0) / districtData.length)
+        : 0,
+    [districtData]
+  );
+
+  const insurerMarketData = useMemo(() => {
+    const map = new Map<string, number>();
+    districtData.forEach((d) => {
+      map.set(d.insurer, (map.get(d.insurer) || 0) + d.grossPremium);
+    });
+    const total = Array.from(map.values()).reduce((a, b) => a + b, 0) || 1;
+    const colors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#64748B'];
+    return Array.from(map.entries()).map(([name, premium], idx) => ({
+      name,
+      premium: Math.round(premium),
+      share: Number(((premium / total) * 100).toFixed(1)),
+      color: colors[idx % colors.length],
+    }));
+  }, [districtData]);
 
   return (
     <div
@@ -660,11 +694,15 @@ export const CropDashboardPage: React.FC = () => {
                     className="ca-select"
                     style={{ height: 32, fontSize: 12, width: 'auto', fontWeight: 600 }}
                   >
+                    <option value="All India">All India (Overview)</option>
                     <option value="Uttar Pradesh">Uttar Pradesh</option>
                     <option value="Maharashtra">Maharashtra</option>
                     <option value="Madhya Pradesh">Madhya Pradesh</option>
                     <option value="Rajasthan">Rajasthan</option>
                     <option value="Karnataka">Karnataka</option>
+                    <option value="Gujarat">Gujarat</option>
+                    <option value="Punjab">Punjab</option>
+                    <option value="Haryana">Haryana</option>
                   </select>
                 </div>
 
@@ -706,39 +744,67 @@ export const CropDashboardPage: React.FC = () => {
 
               {/* View Switches matching ClimAnalytix */}
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                {/* Graphical vs Table */}
+                {/* Map vs Graphical vs Table */}
                 <div style={{ display: 'flex', background: '#F1F5F9', borderRadius: 6, padding: 2 }}>
+                  <button
+                    onClick={() => setViewType('map')}
+                    style={{
+                      padding: '4px 12px',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      borderRadius: 4,
+                      border: 'none',
+                      cursor: 'pointer',
+                      background: viewType === 'map' ? '#2563EB' : 'transparent',
+                      color: viewType === 'map' ? '#FFFFFF' : '#475569',
+                      boxShadow: viewType === 'map' ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
+                    }}
+                  >
+                    <MapPin size={13} />
+                    <span>Map View</span>
+                  </button>
                   <button
                     onClick={() => setViewType('graph')}
                     style={{
-                      padding: '4px 10px',
+                      padding: '4px 12px',
                       fontSize: 12,
                       fontWeight: 600,
                       borderRadius: 4,
                       border: 'none',
                       cursor: 'pointer',
-                      background: viewType === 'graph' ? '#FFFFFF' : 'transparent',
-                      color: viewType === 'graph' ? '#2563EB' : '#64748B',
-                      boxShadow: viewType === 'graph' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      background: viewType === 'graph' ? '#2563EB' : 'transparent',
+                      color: viewType === 'graph' ? '#FFFFFF' : '#475569',
+                      boxShadow: viewType === 'graph' ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
                     }}
                   >
-                    Graphical View
+                    <BarChart3 size={13} />
+                    <span>Graphical View</span>
                   </button>
                   <button
                     onClick={() => setViewType('table')}
                     style={{
-                      padding: '4px 10px',
+                      padding: '4px 12px',
                       fontSize: 12,
                       fontWeight: 600,
                       borderRadius: 4,
                       border: 'none',
                       cursor: 'pointer',
-                      background: viewType === 'table' ? '#FFFFFF' : 'transparent',
-                      color: viewType === 'table' ? '#2563EB' : '#64748B',
-                      boxShadow: viewType === 'table' ? '0 1px 2px rgba(0,0,0,0.06)' : 'none',
+                      background: viewType === 'table' ? '#2563EB' : 'transparent',
+                      color: viewType === 'table' ? '#FFFFFF' : '#475569',
+                      boxShadow: viewType === 'table' ? '0 1px 3px rgba(37,99,235,0.3)' : 'none',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 5,
                     }}
                   >
-                    Table View
+                    <FileText size={13} />
+                    <span>Table View</span>
                   </button>
                 </div>
 
@@ -786,31 +852,43 @@ export const CropDashboardPage: React.FC = () => {
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
                 <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Total Gross Premium</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#2563EB', marginTop: 2 }}>₹ 12,480 Cr</div>
-                  <div style={{ fontSize: 11, color: '#10B981', marginTop: 4 }}>+8.4% YoY Growth</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#2563EB', marginTop: 2 }}>{`₹ ${totalGrossPremium.toLocaleString()} Cr`}</div>
+                  <div style={{ fontSize: 11, color: '#10B981', marginTop: 4 }}>+8.4% YoY Portfolio</div>
                 </div>
 
                 <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Total Sum Insured</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginTop: 2 }}>₹ 84,250 Cr</div>
-                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>Across all implementing clusters</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#0F172A', marginTop: 2 }}>{`₹ ${totalSumInsured.toLocaleString()} Cr`}</div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>Active coverage in {selectedState}</div>
                 </div>
 
                 <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
                   <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Farmer Applications</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669', marginTop: 2 }}>2.41 Crore</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: '#059669', marginTop: 2 }}>{`${(totalFarmers / 100000).toFixed(1)} Lakh`}</div>
                   <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>74% Loanee, 26% Non-Loanee</div>
                 </div>
 
                 <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '14px 18px', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
-                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Area Insured (GCA)</div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: '#D97706', marginTop: 2 }}>18.6 M Ha</div>
-                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>Coverage: 44.2% Gross Cropped</div>
+                  <div style={{ fontSize: 11, fontWeight: 600, color: '#64748B', textTransform: 'uppercase' }}>Average Claims Ratio</div>
+                  <div style={{ fontSize: 22, fontWeight: 800, color: avgClaimRatio > 60 ? '#DC2626' : '#D97706', marginTop: 2 }}>{`${avgClaimRatio}% Avg Loss`}</div>
+                  <div style={{ fontSize: 11, color: '#64748B', marginTop: 4 }}>{`${districtData.length} Monitoring Districts`}</div>
                 </div>
               </div>
 
-              {/* View Rendering: Graphical vs Table */}
-              {viewType === 'graph' ? (
+              {/* View Rendering: Map vs Graphical vs Table */}
+              {viewType === 'map' ? (
+                <CropMap
+                  records={districtData}
+                  activeParameter={activeMapParam}
+                  onParameterChange={setActiveMapParam}
+                  state={selectedState}
+                  year={selectedYear}
+                  season={selectedSeason}
+                  insurerFilter={selectedInsurer}
+                  selectedDistrictId={selectedDistrict?.id}
+                  onSelectDistrict={setSelectedDistrict}
+                />
+              ) : viewType === 'graph' ? (
                 <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: 20 }}>
                   {/* Left: Insurer Market Share Bar Chart */}
                   <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 8, padding: '18px' }}>
@@ -891,24 +969,40 @@ export const CropDashboardPage: React.FC = () => {
                   <table className="ca-table">
                     <thead>
                       <tr>
-                        <th>District / Cluster</th>
+                        <th>District</th>
+                        <th>State</th>
+                        <th>Insurer</th>
                         <th style={{ textAlign: 'right' }}>Sum Insured (₹ Cr)</th>
                         <th style={{ textAlign: 'right' }}>Gross Premium (₹ Cr)</th>
-                        <th style={{ textAlign: 'right' }}>Farmer Applications</th>
-                        <th style={{ textAlign: 'right' }}>Claims Ratio (%)</th>
+                        <th style={{ textAlign: 'right' }}>Farmers</th>
+                        <th style={{ textAlign: 'right' }}>Claims Ratio</th>
+                        <th style={{ textAlign: 'right' }}>Rainfall Dep (%)</th>
+                        <th style={{ textAlign: 'right' }}>Drought SPI</th>
+                        <th style={{ textAlign: 'right' }}>Sowing (%)</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {districtCoverageData.map((row, idx) => (
-                        <tr key={idx}>
+                      {districtData.map((row, idx) => (
+                        <tr key={idx} style={{ cursor: 'pointer' }} onClick={() => setSelectedDistrict(row)}>
                           <td style={{ fontWeight: 600 }}>{row.district}</td>
+                          <td style={{ color: '#64748B' }}>{row.state}</td>
+                          <td style={{ fontSize: 11, color: '#2563EB' }}>{row.insurer}</td>
                           <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>₹ {row.sumInsured} Cr</td>
                           <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: '#2563EB' }}>
                             ₹ {row.grossPremium} Cr
                           </td>
                           <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)' }}>{row.farmers.toLocaleString()}</td>
-                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: row.claimRatio > 50 ? '#DC2626' : '#16A34A' }}>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', fontWeight: 600, color: row.claimRatio > 60 ? '#DC2626' : '#16A34A' }}>
                             {row.claimRatio}%
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: row.rainfallDeparture < -20 ? '#EA580C' : '#0284C7' }}>
+                            {row.rainfallDeparture > 0 ? '+' : ''}{row.rainfallDeparture}%
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: row.droughtSpi < -1.0 ? '#DC2626' : '#10B981' }}>
+                            {row.droughtSpi > 0 ? '+' : ''}{row.droughtSpi}
+                          </td>
+                          <td style={{ textAlign: 'right', fontFamily: 'var(--font-mono)', color: row.sowingProgress >= 80 ? '#10B981' : '#F59E0B' }}>
+                            {row.sowingProgress}%
                           </td>
                         </tr>
                       ))}
