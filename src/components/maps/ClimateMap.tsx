@@ -73,7 +73,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Use clean light grayscale CartoDB tiles for scientific GIS precision
+    // Clean, high-performance Esri World Light Gray Canvas (100% free, no API key required, no watermarks)
     const map = L.map(mapContainerRef.current, {
       center: viewState.center,
       zoom: viewState.zoom,
@@ -81,9 +81,9 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      maxZoom: 14,
-      subdomains: 'abcd',
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri',
     }).addTo(map);
 
     // Zoom control in top-right
