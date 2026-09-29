@@ -64,18 +64,16 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
     [regions, selectedDistrictId]
   );
 
-  // Validation rules matching ClimAnalytix
+  // Validation rules
   const validationErrors = useMemo(() => {
     const errs: string[] = [];
     if (locationMode === 'region') {
-      if (!selectedStateId) errs.push('State must be selected.');
-      if (!selectedDistrictId) errs.push('District must be selected.');
-      if (!selectedBlockId) errs.push('Sub District must be selected.');
+      if (!selectedStateId) errs.push('Please select a State.');
     } else {
       if (!pointLat || !pointLon) errs.push('Valid Latitude and Longitude must be provided.');
     }
     return errs;
-  }, [locationMode, selectedStateId, selectedDistrictId, selectedBlockId, pointLat, pointLon]);
+  }, [locationMode, selectedStateId, pointLat, pointLon]);
 
   const isValid = validationErrors.length === 0;
 
@@ -237,7 +235,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 4 }}>
-              District/County
+              District / County <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 400 }}>(Optional)</span>
             </label>
             <select
               value={selectedDistrictId}
@@ -246,7 +244,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               className="ca-select"
               style={{ width: '100%', height: 36, fontSize: 13 }}
             >
-              <option value="">Select District</option>
+              <option value="">All Districts ({districts.length} available)</option>
               {districts.map((d) => (
                 <option key={d.id} value={d.id}>
                   {d.name}
@@ -257,7 +255,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
 
           <div>
             <label style={{ display: 'block', fontSize: 12, fontWeight: 500, color: '#374151', marginBottom: 4 }}>
-              Sub District/Block
+              Sub District / Block <span style={{ fontSize: 11, color: '#6B7280', fontWeight: 400 }}>(Optional)</span>
             </label>
             <select
               value={selectedBlockId}
@@ -266,7 +264,7 @@ export const FilterSidebar: React.FC<FilterSidebarProps> = ({
               className="ca-select"
               style={{ width: '100%', height: 36, fontSize: 13 }}
             >
-              <option value="">Select Sub District</option>
+              <option value="">All Blocks ({blocks.length} available)</option>
               {blocks.map((b) => (
                 <option key={b.id} value={b.id}>
                   {b.name}

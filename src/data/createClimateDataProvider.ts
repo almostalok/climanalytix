@@ -7,17 +7,20 @@ import { HttpClimateDataProvider } from './HttpClimateDataProvider';
  * or HttpClimateDataProvider in production mode (VITE_DEMO_MODE=false or undefined).
  */
 export function createClimateDataProvider(forceMode?: 'demo' | 'production'): ClimateDataProvider {
-  const isDemo =
-    forceMode === 'demo' ||
-    (forceMode !== 'production' &&
-      typeof import.meta !== 'undefined' &&
-      import.meta.env?.VITE_DEMO_MODE === 'true');
-
-  if (isDemo) {
-    return new MockClimateDataProvider();
+  if (forceMode === 'production') {
+    return new HttpClimateDataProvider();
   }
 
-  return new HttpClimateDataProvider();
+  const isExplicitProduction =
+    forceMode !== 'demo' &&
+    typeof import.meta !== 'undefined' &&
+    import.meta.env?.VITE_DEMO_MODE === 'false';
+
+  if (isExplicitProduction) {
+    return new HttpClimateDataProvider();
+  }
+
+  return new MockClimateDataProvider();
 }
 
 // Default application singleton

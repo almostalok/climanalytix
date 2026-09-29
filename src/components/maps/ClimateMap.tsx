@@ -22,7 +22,14 @@ interface ClimateMapProps {
   onViewStateChange?: (state: ViewState) => void;
   onMapClick?: (lat: number, lon: number) => void;
   unit: string;
+  basemap?: 'light' | 'dark' | 'satellite';
 }
+
+const BASEMAP_TILES: Record<string, string> = {
+  light: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  dark: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+};
 
 // Color scale interpolator for grid cells
 function getFillColor(val: number, type: 'actual' | 'normal' | 'anomaly', variable: ClimateVariable): string {
@@ -63,9 +70,11 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   onViewStateChange,
   onMapClick,
   unit,
+  basemap = 'light',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const isInternalMoveRef = useRef<boolean>(false);
 
@@ -73,7 +82,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Clean, high-performance Esri World Light Gray Canvas (100% free, no API key required, no watermarks)
+    // Clean, high-performance Esri World Canvas (100% free, no API key required, no watermarks)
     const map = L.map(mapContainerRef.current, {
       center: viewState.center,
       zoom: viewState.zoom,
@@ -81,10 +90,12 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       attributionControl: false,
     });
 
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    const tileUrl = BASEMAP_TILES[basemap] || BASEMAP_TILES.light;
+    const tileLayer = L.tileLayer(tileUrl, {
       maxZoom: 16,
       attribution: 'Tiles &copy; Esri',
     }).addTo(map);
+    tileLayerRef.current = tileLayer;
 
     // Zoom control in top-right
     L.control.zoom({ position: 'topright' }).addTo(map);
@@ -140,6 +151,22 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       map.setView(viewState.center, viewState.zoom, { animate: false });
     }
   }, [viewState]);
+
+  // Dynamically update basemap tile layer when changed
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+    const tileUrl = BASEMAP_TILES[basemap] || BASEMAP_TILES.light;
+    const tileLayer = L.tileLayer(tileUrl, {
+      maxZoom: 16,
+      attribution: 'Tiles &copy; Esri',
+    }).addTo(map);
+    tileLayerRef.current = tileLayer;
+    tileLayer.bringToBack();
+  }, [basemap]);
 
   // Redraw grid cells when gridPoints or selection changes
   useEffect(() => {
@@ -210,6 +237,28 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       });
 
       rect.addTo(group);
+
+      if (isSelected) {
+        // High-contrast beacon ring
+        const beacon = L.circleMarker([point.lat, point.lon], {
+          radius: 12,
+          color: '#2563EB',
+          weight: 2,
+          fillColor: '#3B82F6',
+          fillOpacity: 0.35,
+        });
+        beacon.addTo(group);
+
+        // Center dot
+        const pin = L.circleMarker([point.lat, point.lon], {
+          radius: 5,
+          color: '#FFFFFF',
+          weight: 2,
+          fillColor: '#1D4ED8',
+          fillOpacity: 1.0,
+        });
+        pin.addTo(group);
+      }
     });
   }, [gridPoints, selectedGridId, type, variable, dataset, date, unit]);
 

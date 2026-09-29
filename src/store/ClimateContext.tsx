@@ -116,33 +116,64 @@ export const ClimateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Load initial metadata, regions, grids
   useEffect(() => {
     async function init() {
-      const [m, r, g] = await Promise.all([
-        climateDataProvider.getManifest(),
-        climateDataProvider.getRegions(),
-        climateDataProvider.getGridCells(),
-      ]);
-      setManifest(m);
-      setRegions(r);
-      setGridCells(g);
+      try {
+        const [m, r, g] = await Promise.all([
+          climateDataProvider.getManifest(),
+          climateDataProvider.getRegions(),
+          climateDataProvider.getGridCells(),
+        ]);
+        setManifest(m);
+        setRegions(r);
+        setGridCells(g);
+      } catch (err) {
+        console.warn('Failed to load climate metadata, falling back to static catalogue:', err);
+        const { REGIONS } = await import('../data/regions');
+        const { GRID_CELLS } = await import('../data/gridCells');
+        const { DATASET_MANIFEST } = await import('../data/MockClimateDataProvider');
+        setManifest(DATASET_MANIFEST);
+        setRegions(REGIONS);
+        setGridCells(GRID_CELLS);
+      }
     }
     init();
   }, []);
 
-  // Cascading Region Resets
+  // Cascading Region Resets with centroid synchronization
   const setSelectedStateId = useCallback((stateId: string) => {
     setSelectedStateIdState(stateId);
     setSelectedDistrictIdState('');
     setSelectedBlockIdState('');
-  }, []);
+    if (stateId) {
+      const stateObj = regions.find((r) => r.id === stateId);
+      if (stateObj?.centroid) {
+        setPointLat(stateObj.centroid[0]);
+        setPointLon(stateObj.centroid[1]);
+      }
+    }
+  }, [regions]);
 
   const setSelectedDistrictId = useCallback((districtId: string) => {
     setSelectedDistrictIdState(districtId);
     setSelectedBlockIdState('');
-  }, []);
+    if (districtId) {
+      const distObj = regions.find((r) => r.id === districtId);
+      if (distObj?.centroid) {
+        setPointLat(distObj.centroid[0]);
+        setPointLon(distObj.centroid[1]);
+      }
+    }
+  }, [regions]);
 
   const setSelectedBlockId = useCallback((blockId: string) => {
     setSelectedBlockIdState(blockId);
-  }, []);
+    if (blockId) {
+      const matchGrid = gridCells.find((c) => c.blockId === blockId);
+      if (matchGrid) {
+        setPointLat(matchGrid.lat);
+        setPointLon(matchGrid.lon);
+      }
+    }
+  }, [gridCells]);
 
   const setPoint = useCallback((lat: number, lon: number) => {
     setPointLat(Math.round(lat * 10000) / 10000);

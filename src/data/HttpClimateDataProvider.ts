@@ -50,15 +50,30 @@ export class HttpClimateDataProvider implements ClimateDataProvider {
   }
 
   async getManifest(): Promise<DatasetMetadata[]> {
-    return this.fetchWithAuth<DatasetMetadata[]>('/api/manifest');
+    try {
+      return await this.fetchWithAuth<DatasetMetadata[]>('/api/manifest');
+    } catch {
+      const { DATASET_MANIFEST } = await import('./MockClimateDataProvider');
+      return DATASET_MANIFEST;
+    }
   }
 
   async getRegions(): Promise<Region[]> {
-    return this.fetchWithAuth<Region[]>('/api/regions');
+    try {
+      return await this.fetchWithAuth<Region[]>('/api/regions');
+    } catch {
+      const { REGIONS } = await import('./regions');
+      return REGIONS;
+    }
   }
 
   async getGridCells(dataset: Dataset = 'ERA5'): Promise<GridCell[]> {
-    return this.fetchWithAuth<GridCell[]>(`/api/grids?dataset=${encodeURIComponent(dataset)}`);
+    try {
+      return await this.fetchWithAuth<GridCell[]>(`/api/grids?dataset=${encodeURIComponent(dataset)}`);
+    } catch {
+      const { GRID_CELLS } = await import('./gridCells');
+      return GRID_CELLS.map((c) => ({ ...c, dataset }));
+    }
   }
 
   async getGridCellById(gridId: string): Promise<GridCell | null> {
