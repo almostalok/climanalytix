@@ -151,7 +151,7 @@ export const RainfallLayout: React.FC = () => {
       >
         {/* Left Filter Sidebar */}
         <div>
-          <FilterSidebar variable="rainfall" showCriteria={!isViz} />
+          <FilterSidebar variable="rainfall" showCriteria={true} />
         </div>
 
         {/* Right Tab Content */}

@@ -170,7 +170,7 @@ export const TemperatureLayout: React.FC = () => {
       >
         {/* Left Filter Sidebar */}
         <div>
-          <FilterSidebar variable="temperature" showCriteria={!isViz} />
+          <FilterSidebar variable="temperature" showCriteria={true} />
         </div>
 
         {/* Right Tab Content */}

@@ -101,6 +101,7 @@ export const REGIONS: Region[] = [
   { id: 'tn_salem', name: 'Salem', type: 'district', parentId: 'tn', centroid: [11.6643, 78.146] },
 
   // Andhra Pradesh
+  { id: 'ap_asr', name: 'Alluri Sitharama Raju', type: 'district', parentId: 'ap', centroid: [18.05, 82.25] },
   { id: 'ap_visakhapatnam', name: 'Visakhapatnam', type: 'district', parentId: 'ap', centroid: [17.6868, 83.2185] },
   { id: 'ap_vijayawada', name: 'NTR / Vijayawada', type: 'district', parentId: 'ap', centroid: [16.5062, 80.648] },
   { id: 'ap_guntur', name: 'Guntur', type: 'district', parentId: 'ap', centroid: [16.3067, 80.4365] },

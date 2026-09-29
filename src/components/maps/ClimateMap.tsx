@@ -2,8 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import { ClimateVariable, Dataset } from '../../types/climate';
 import { DailyGridPoint } from '../../types/provider';
-import { MapLegend } from './MapLegend';
-import { RotateCcw } from 'lucide-react';
+import { DistrictGISData } from '../../data/districtBoundaries';
 
 export interface ViewState {
   center: [number, number];
@@ -17,94 +16,61 @@ interface ClimateMapProps {
   dataset: Dataset;
   date: string;
   gridPoints: DailyGridPoint[];
+  districtGIS?: DistrictGISData | null;
   selectedGridId?: string;
   viewState: ViewState;
   onViewStateChange?: (state: ViewState) => void;
   onMapClick?: (lat: number, lon: number) => void;
   unit: string;
-  basemap?: 'light' | 'dark' | 'satellite';
-}
-
-const BASEMAP_TILES: Record<string, string> = {
-  light: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-  dark: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
-  satellite: 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-};
-
-// Color scale interpolator for grid cells
-function getFillColor(val: number, type: 'actual' | 'normal' | 'anomaly', variable: ClimateVariable): string {
-  if (type === 'anomaly') {
-    if (val === undefined || isNaN(val)) return '#9CA3AF';
-    if (val >= 60) return '#DC2626';
-    if (val >= 20) return '#FB923C';
-    if (val >= -19 && val <= 19) return '#E2E8F0';
-    if (val >= -50) return '#60A5FA';
-    return '#1D4ED8';
-  }
-
-  if (variable === 'rainfall') {
-    if (val <= 0.5) return '#F0F9FF';
-    if (val <= 10) return '#BAE6FD';
-    if (val <= 25) return '#38BDF8';
-    if (val <= 50) return '#0284C7';
-    return '#0C4A6E';
-  } else {
-    // Temperature
-    if (val < 22) return '#93C5FD';
-    if (val < 30) return '#FDE68A';
-    if (val < 38) return '#F97316';
-    if (val < 42) return '#EA580C';
-    return '#991B1B';
-  }
 }
 
 export const ClimateMap: React.FC<ClimateMapProps> = ({
-  title,
   type,
   variable,
   dataset,
   date,
   gridPoints,
+  districtGIS,
   selectedGridId,
   viewState,
   onViewStateChange,
   onMapClick,
   unit,
-  basemap = 'light',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const isInternalMoveRef = useRef<boolean>(false);
 
-  // Initialize Leaflet map
+  const badgeTitle =
+    type === 'actual'
+      ? `Actual (${unit})`
+      : type === 'normal'
+      ? `Normal (${unit})`
+      : 'Anomaly (%)';
+
+  // Initialize Leaflet map matching exact reference platform layout
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
-    // Clean, high-performance Esri World Canvas (100% free, no API key required, no watermarks)
     const map = L.map(mapContainerRef.current, {
       center: viewState.center,
       zoom: viewState.zoom,
-      zoomControl: false,
-      attributionControl: false,
+      zoomControl: true, // + and - at top-left matching reference screenshot
+      attributionControl: true, // Leaflet badge at bottom-right
     });
 
-    const tileUrl = BASEMAP_TILES[basemap] || BASEMAP_TILES.light;
-    const tileLayer = L.tileLayer(tileUrl, {
-      maxZoom: 16,
-      attribution: 'Tiles &copy; Esri',
+    // High detail OpenStreetMap standard tile layer matching reference screenshot topography & borders
+    L.tileLayer('https://tile.openstreetmap.org/{z}/{y}/{x}.png', {
+      maxZoom: 18,
+      attribution: '&copy; OpenStreetMap contributors',
     }).addTo(map);
-    tileLayerRef.current = tileLayer;
 
-    // Zoom control in top-right
-    L.control.zoom({ position: 'topright' }).addTo(map);
-
-    // Layer group for dynamic grid cells
+    // Dynamic layer group for district boundary & grid blocks
     const layerGroup = L.layerGroup().addTo(map);
     layerGroupRef.current = layerGroup;
 
-    // Sync viewport change to siblings
+    // Viewport change synchronization
     map.on('moveend', () => {
       if (isInternalMoveRef.current) {
         isInternalMoveRef.current = false;
@@ -119,7 +85,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       }
     });
 
-    // Map click handling
+    // Map click
     map.on('click', (e: L.LeafletMouseEvent) => {
       if (onMapClick) {
         onMapClick(e.latlng.lat, e.latlng.lng);
@@ -134,7 +100,7 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     };
   }, []);
 
-  // Sync incoming viewState (from brother maps)
+  // Sync viewport changes between maps
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
@@ -152,34 +118,70 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     }
   }, [viewState]);
 
-  // Dynamically update basemap tile layer when changed
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    if (tileLayerRef.current) {
-      map.removeLayer(tileLayerRef.current);
-    }
-    const tileUrl = BASEMAP_TILES[basemap] || BASEMAP_TILES.light;
-    const tileLayer = L.tileLayer(tileUrl, {
-      maxZoom: 16,
-      attribution: 'Tiles &copy; Esri',
-    }).addTo(map);
-    tileLayerRef.current = tileLayer;
-    tileLayer.bringToBack();
-  }, [basemap]);
-
-  // Redraw grid cells when gridPoints or selection changes
+  // Redraw layers when districtGIS, gridPoints, or parameters change
   useEffect(() => {
     const group = layerGroupRef.current;
     if (!group) return;
 
     group.clearLayers();
 
-    const isRain = variable === 'rainfall';
-    const halfRes = 0.25 / 2;
+    // 1. If District GIS data with raster blocks is present, render district polygon & contiguous raster blocks
+    if (districtGIS && districtGIS.blocks && districtGIS.blocks.length > 0) {
+      // Draw contiguous raster blocks matching screenshot
+      districtGIS.blocks.forEach((block) => {
+        const fillColor =
+          type === 'actual'
+            ? block.colorActual
+            : type === 'normal'
+            ? block.colorNormal
+            : block.colorAnomaly;
 
+        const rect = L.rectangle(block.bounds, {
+          color: '#1E293B',
+          weight: 0.6,
+          fillColor,
+          fillOpacity: 0.78,
+        });
+
+        const tooltipVal =
+          type === 'actual'
+            ? `<strong>${block.actual} ${unit}</strong>`
+            : type === 'normal'
+            ? `<strong>${block.normal} ${unit}</strong>`
+            : `<strong>${block.anomalyPct >= 0 ? '+' : ''}${block.anomalyPct}%</strong>`;
+
+        const popupContent = `
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1.4; min-width: 150px;">
+            <div style="font-weight: 700; color: #111827; border-bottom: 1px solid #E5E7EB; padding-bottom: 3px; margin-bottom: 3px;">
+              ${districtGIS.name}
+            </div>
+            <div style="color: #4B5563;">${block.lat.toFixed(2)}°N, ${block.lon.toFixed(2)}°E</div>
+            <div style="margin-top: 3px; color: #1E40AF;">
+              ${badgeTitle}: ${tooltipVal}
+            </div>
+          </div>
+        `;
+        rect.bindTooltip(popupContent, { sticky: true });
+        rect.addTo(group);
+      });
+
+      // Draw crisp black district outline boundary over the raster blocks
+      if (districtGIS.polygon && districtGIS.polygon.length > 0) {
+        const poly = L.polygon(districtGIS.polygon, {
+          color: '#000000',
+          weight: 2.2,
+          fill: false,
+          opacity: 0.95,
+        });
+        poly.addTo(group);
+      }
+      return;
+    }
+
+    // 2. Otherwise render standard national/state grid cells
     gridPoints.forEach((point) => {
       const isSelected = point.id === selectedGridId;
+      const halfRes = 0.25 / 2;
       const bounds: L.LatLngBoundsExpression = [
         [point.lat - halfRes, point.lon - halfRes],
         [point.lat + halfRes, point.lon + halfRes],
@@ -194,140 +196,63 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
           ? point.normal
           : point.value;
 
-      const fillColor = getFillColor(valForColor, type, variable);
+      let fillColor = '#38BDF8';
+      if (type === 'anomaly') {
+        fillColor = valForColor >= 60 ? '#1D4ED8' : valForColor >= 20 ? '#38BDF8' : valForColor >= -19 ? '#E2E8F0' : '#F97316';
+      } else if (type === 'normal') {
+        fillColor = valForColor > 100 ? '#EF4444' : '#F87171';
+      } else {
+        fillColor = valForColor > 250 ? '#2563EB' : valForColor > 150 ? '#22C55E' : '#FBBF24';
+      }
 
       const rect = L.rectangle(bounds, {
         color: isSelected ? '#1E40AF' : '#64748B',
-        weight: isSelected ? 2.5 : 0.8,
-        fillColor: fillColor,
-        fillOpacity: isSelected ? 0.85 : 0.7,
-      });
-
-      // Tooltip popup per Spec 56
-      let valueDisplay = '';
-      if (type === 'anomaly') {
-        valueDisplay = `Anomaly: <strong>${point.anomalyFormatted}</strong> (Actual: ${point.value}${unit}, Normal: ${point.normal}${unit})`;
-      } else if (type === 'normal') {
-        valueDisplay = `Climatological Normal: <strong>${point.normal} ${unit}</strong>`;
-      } else {
-        valueDisplay = `${isRain ? 'Rainfall' : 'Temperature'}: <strong>${point.value} ${unit}</strong>`;
-      }
-
-      const popupContent = `
-        <div style="font-family: var(--font-sans); font-size: 12px; line-height: 1.4; min-width: 170px;">
-          <div style="font-weight: 700; color: #111827; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; margin-bottom: 4px;">
-            ${point.regionName}
-          </div>
-          <div>${point.lat.toFixed(2)}°N, ${point.lon.toFixed(2)}°E</div>
-          <div style="margin: 4px 0; color: #1E40AF;">${valueDisplay}</div>
-          <div style="font-size: 11px; color: #6B7280; font-family: var(--font-mono);">
-            Ref Grid: <strong>${point.id}</strong><br/>
-            Dataset: ${dataset} | Date: ${date}
-          </div>
-        </div>
-      `;
-
-      rect.bindTooltip(popupContent, { sticky: true, className: 'ca-map-tooltip' });
-
-      // Click to select
-      rect.on('click', () => {
-        if (onMapClick) {
-          onMapClick(point.lat, point.lon);
-        }
+        weight: isSelected ? 2 : 0.8,
+        fillColor,
+        fillOpacity: 0.75,
       });
 
       rect.addTo(group);
-
-      if (isSelected) {
-        // High-contrast beacon ring
-        const beacon = L.circleMarker([point.lat, point.lon], {
-          radius: 12,
-          color: '#2563EB',
-          weight: 2,
-          fillColor: '#3B82F6',
-          fillOpacity: 0.35,
-        });
-        beacon.addTo(group);
-
-        // Center dot
-        const pin = L.circleMarker([point.lat, point.lon], {
-          radius: 5,
-          color: '#FFFFFF',
-          weight: 2,
-          fillColor: '#1D4ED8',
-          fillOpacity: 1.0,
-        });
-        pin.addTo(group);
-      }
     });
-  }, [gridPoints, selectedGridId, type, variable, dataset, date, unit]);
-
-  const handleResetView = () => {
-    if (onViewStateChange) {
-      onViewStateChange({ center: [22.5, 79.5], zoom: 5 });
-    }
-  };
+  }, [districtGIS, gridPoints, selectedGridId, type, variable, dataset, date, unit, badgeTitle]);
 
   return (
     <div
-      className="ca-card"
       style={{
-        display: 'flex',
-        flexDirection: 'column',
+        position: 'relative',
+        background: '#FFFFFF',
+        border: '1px solid #E5E7EB',
+        borderRadius: 6,
         overflow: 'hidden',
-        height: '100%',
-        minHeight: 420,
+        height: '460px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
       }}
     >
-      {/* Panel Header */}
+      {/* Floating White Pill Header Title matching reference platform */}
       <div
         style={{
-          padding: '10px 14px',
-          background: '#F8F9FA',
-          borderBottom: '1px solid #E4E7EC',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
+          position: 'absolute',
+          top: 12,
+          left: '50%',
+          transform: 'translateX(-50%)',
+          background: '#FFFFFF',
+          border: '1px solid #E5E7EB',
+          borderRadius: 6,
+          padding: '6px 20px',
+          boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+          zIndex: 999,
+          fontSize: 13,
+          fontWeight: 700,
+          color: '#111827',
+          letterSpacing: '0.01em',
+          pointerEvents: 'none',
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: '#111827', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-            {title}
-          </span>
-          <span
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              padding: '1px 5px',
-              borderRadius: 3,
-              background: type === 'anomaly' ? '#FEF3C7' : type === 'actual' ? '#EFF6FF' : '#F3F4F6',
-              color: type === 'anomaly' ? '#B45309' : type === 'actual' ? '#1E40AF' : '#4B5563',
-            }}
-          >
-            {type === 'anomaly' ? '%' : unit}
-          </span>
-        </div>
-
-        <button
-          onClick={handleResetView}
-          className="ca-btn ca-btn-secondary ca-btn-sm"
-          style={{ padding: '3px 8px', fontSize: 11, gap: 4 }}
-          title="Reset map center to India view"
-        >
-          <RotateCcw size={11} />
-          <span>Reset</span>
-        </button>
+        {badgeTitle}
       </div>
 
-      {/* Leaflet map container with absolute overlay legend */}
-      <div style={{ position: 'relative', flex: 1, minHeight: 380 }}>
-        <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
-
-        {/* Legend Overlay at bottom left */}
-        <div style={{ position: 'absolute', bottom: 12, left: 12, zIndex: 400 }}>
-          <MapLegend type={type} variable={variable} />
-        </div>
-      </div>
+      {/* Leaflet Map Div */}
+      <div ref={mapContainerRef} style={{ width: '100%', height: '100%' }} />
     </div>
   );
 };

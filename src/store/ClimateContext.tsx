@@ -81,19 +81,19 @@ export const ClimateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [regions, setRegions] = useState<Region[]>([]);
   const [gridCells, setGridCells] = useState<GridCell[]>([]);
 
-  // Location (Initially unselected matching ClimAnalytix)
+  // Location (Default to Andhra Pradesh / Alluri Sitharama Raju matching reference)
   const [locationMode, setLocationMode] = useState<'region' | 'point'>('region');
-  const [selectedStateId, setSelectedStateIdState] = useState<string>('');
-  const [selectedDistrictId, setSelectedDistrictIdState] = useState<string>('');
+  const [selectedStateId, setSelectedStateIdState] = useState<string>('ap');
+  const [selectedDistrictId, setSelectedDistrictIdState] = useState<string>('ap_asr');
   const [selectedBlockId, setSelectedBlockIdState] = useState<string>('');
 
   // Point coordinates
-  const [pointLat, setPointLat] = useState<number>(0);
-  const [pointLon, setPointLon] = useState<number>(0);
+  const [pointLat, setPointLat] = useState<number>(18.05);
+  const [pointLon, setPointLon] = useState<number>(82.25);
 
-  // Date range
-  const [startDate, setStartDate] = useState<string>('2024-01-01');
-  const [endDate, setEndDate] = useState<string>('2024-12-31');
+  // Date range (matching reference platform)
+  const [startDate, setStartDate] = useState<string>('2026-09-21');
+  const [endDate, setEndDate] = useState<string>('2026-09-27');
 
   // Criteria
   const [rainThreshold, setRainThreshold] = useState<number>(0);
@@ -104,9 +104,9 @@ export const ClimateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tempThreshold, setTempThreshold] = useState<number>(35);
   const [tempBreakDays, setTempBreakDays] = useState<number>(0);
 
-  const [normalPeriod, setNormalPeriod] = useState<10 | 20 | 30>(30);
-  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(false);
-  const [analysisTrigger, setAnalysisTrigger] = useState<number>(0);
+  const [normalPeriod, setNormalPeriod] = useState<10 | 20 | 30>(10);
+  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(true);
+  const [analysisTrigger, setAnalysisTrigger] = useState<number>(1);
 
   const triggerAnalysis = useCallback(() => {
     setHasAppliedFilters(true);

@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { ClimateMap, ViewState } from './ClimateMap';
 import { ClimateVariable, Dataset } from '../../types/climate';
 import { DailyGridPoint } from '../../types/provider';
-import { Map, Moon, Sun, Globe } from 'lucide-react';
+import { DistrictGISData } from '../../data/districtBoundaries';
+import { ReferenceMapLegends } from './ReferenceMapLegends';
 
 interface SynchronizedMapsProps {
   variable: ClimateVariable;
   dataset: Dataset;
   date: string;
   gridPoints: DailyGridPoint[];
+  districtGIS?: DistrictGISData | null;
   selectedGridId?: string;
   onMapClick?: (lat: number, lon: number) => void;
   unit: string;
@@ -21,179 +23,91 @@ export const SynchronizedMaps: React.FC<SynchronizedMapsProps> = ({
   dataset,
   date,
   gridPoints,
+  districtGIS,
   selectedGridId,
   onMapClick,
   unit,
   targetCenter,
   targetZoom,
 }) => {
-  // Shared viewport state across all 3 maps
+  // Shared viewport state across all 3 maps (defaults to ASR district / AP view matching reference)
   const [viewState, setViewState] = useState<ViewState>({
-    center: [22.5, 79.5],
-    zoom: 5,
+    center: targetCenter || [18.05, 82.25],
+    zoom: targetZoom || 8,
   });
 
-  const [basemap, setBasemap] = useState<'light' | 'dark' | 'satellite'>('light');
-
-  // React to target center changes (e.g. state/district selected or pin dropped)
+  // Sync when targetCenter or district changes
   useEffect(() => {
     if (targetCenter && targetCenter[0] !== 0 && targetCenter[1] !== 0) {
       setViewState({
         center: targetCenter,
-        zoom: targetZoom || (targetCenter[0] === 22.5 ? 5 : 7),
+        zoom: targetZoom || 8,
       });
     }
   }, [targetCenter, targetZoom]);
 
   return (
-    <div>
-      {/* Top Map Sync Toolbar with Basemap Switcher */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          flexWrap: 'wrap',
-          gap: 10,
-          marginBottom: 12,
-          padding: '8px 14px',
-          background: '#FFFFFF',
-          border: '1px solid #E5E7EB',
-          borderRadius: 8,
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#374151' }}>
-          <Map size={16} color="#2563EB" />
-          <span style={{ fontWeight: 600 }}>Tri-Synchronized Spatial Projection</span>
-          <span style={{ fontSize: 12, color: '#6B7280' }}>
-            ({gridPoints.length} observation grid cells active)
-          </span>
-        </div>
-
-        {/* Basemap Switcher */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <span style={{ fontSize: 12, color: '#6B7280', marginRight: 4, fontWeight: 500 }}>Basemap:</span>
-          <button
-            type="button"
-            onClick={() => setBasemap('light')}
-            style={{
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 600,
-              borderRadius: 5,
-              border: basemap === 'light' ? '1px solid #2563EB' : '1px solid #E5E7EB',
-              background: basemap === 'light' ? '#EFF6FF' : '#FFFFFF',
-              color: basemap === 'light' ? '#1D4ED8' : '#4B5563',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Sun size={12} />
-            <span>Light Canvas</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setBasemap('dark')}
-            style={{
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 600,
-              borderRadius: 5,
-              border: basemap === 'dark' ? '1px solid #2563EB' : '1px solid #E5E7EB',
-              background: basemap === 'dark' ? '#EFF6FF' : '#FFFFFF',
-              color: basemap === 'dark' ? '#1D4ED8' : '#4B5563',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Moon size={12} />
-            <span>Dark Canvas</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setBasemap('satellite')}
-            style={{
-              padding: '4px 10px',
-              fontSize: 11,
-              fontWeight: 600,
-              borderRadius: 5,
-              border: basemap === 'satellite' ? '1px solid #2563EB' : '1px solid #E5E7EB',
-              background: basemap === 'satellite' ? '#EFF6FF' : '#FFFFFF',
-              color: basemap === 'satellite' ? '#1D4ED8' : '#4B5563',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: 4,
-            }}
-          >
-            <Globe size={12} />
-            <span>Satellite</span>
-          </button>
-        </div>
-      </div>
-
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 3 Synchronized Maps Side-by-Side matching reference platform */}
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))',
-          gap: 16,
-          marginBottom: 24,
+          gridTemplateColumns: 'repeat(3, 1fr)',
+          gap: 12,
         }}
+        className="ca-sync-maps-grid"
       >
-        {/* Panel 1: Actual */}
+        {/* Map 1: Actual */}
         <ClimateMap
-          title="1. Observational Actual"
+          title="Actual"
           type="actual"
           variable={variable}
           dataset={dataset}
           date={date}
           gridPoints={gridPoints}
+          districtGIS={districtGIS}
           selectedGridId={selectedGridId}
           viewState={viewState}
           onViewStateChange={setViewState}
           onMapClick={onMapClick}
           unit={unit}
-          basemap={basemap}
         />
 
-        {/* Panel 2: Climatological Normal */}
+        {/* Map 2: Normal */}
         <ClimateMap
-          title="2. Climatological Normal"
+          title="Normal"
           type="normal"
           variable={variable}
           dataset={dataset}
           date={date}
           gridPoints={gridPoints}
+          districtGIS={districtGIS}
           selectedGridId={selectedGridId}
           viewState={viewState}
           onViewStateChange={setViewState}
           onMapClick={onMapClick}
           unit={unit}
-          basemap={basemap}
         />
 
-        {/* Panel 3: Anomaly */}
+        {/* Map 3: Anomaly */}
         <ClimateMap
-          title="3. Climatological Anomaly"
+          title="Anomaly"
           type="anomaly"
           variable={variable}
           dataset={dataset}
           date={date}
           gridPoints={gridPoints}
+          districtGIS={districtGIS}
           selectedGridId={selectedGridId}
           viewState={viewState}
           onViewStateChange={setViewState}
           onMapClick={onMapClick}
           unit={unit}
-          basemap={basemap}
         />
       </div>
+
+      {/* Exact Reference Platform Legends at bottom */}
+      <ReferenceMapLegends variable={variable} />
     </div>
   );
 };
