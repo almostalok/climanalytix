@@ -249,20 +249,6 @@ export const DashboardPage: React.FC = () => {
               >
                 <Sprout size={26} />
               </div>
-              <span
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  background: '#FEF3C7',
-                  color: '#92400E',
-                  padding: '3px 10px',
-                  borderRadius: 9999,
-                  border: '1px solid #FDE68A',
-                  letterSpacing: '0.04em',
-                }}
-              >
-                PHASE 2 PREVIEW
-              </span>
             </div>
 
             <h3 style={{ fontSize: 20, fontWeight: 700, color: '#0F172A', marginBottom: 10 }}>
@@ -270,14 +256,14 @@ export const DashboardPage: React.FC = () => {
             </h3>
 
             <p style={{ fontSize: 14, color: '#64748B', lineHeight: 1.6, marginBottom: 24 }}>
-              Demonstrator preview for future agro-insurance intelligence covering district coverage, sowing and harvest progress,
-              historical drought (1901–2020), and cyclone risk correlations (planned for Phase 2).
+              Comprehensive agro-insurance intelligence covering district coverage, sowing and harvest progress,
+              historical drought (1901–2020), and actuarial pricing correlations.
             </p>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 28 }}>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                <span>11 Agro-Insurance & Yield Demonstrator Modules</span>
+                <span>11 Agro-Insurance & Yield Analytics Modules</span>
               </div>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
@@ -285,7 +271,7 @@ export const DashboardPage: React.FC = () => {
               </div>
               <div style={{ fontSize: 13, color: '#334155', display: 'flex', alignItems: 'center', gap: 8 }}>
                 <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#10B981' }} />
-                <span>Phase 2 pipeline: Non-MVP demonstrator</span>
+                <span>District-level APR actuarial burn-cost models</span>
               </div>
             </div>
           </div>
@@ -308,7 +294,7 @@ export const DashboardPage: React.FC = () => {
               cursor: 'pointer',
             }}
           >
-            <span>Explore Crop Analytics (Phase 2)</span>
+            <span>Explore Crop Analytics</span>
             <ArrowRight size={16} />
           </button>
         </div>

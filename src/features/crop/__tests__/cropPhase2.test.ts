@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 
-describe('Crop Dashboard Phase 2 Specification Compliance', () => {
+describe('Crop Dashboard Integration Compliance', () => {
   const topbarPath = path.resolve(__dirname, '../../../components/layout/Topbar.tsx');
   const dashboardPath = path.resolve(__dirname, '../../dashboard/DashboardPage.tsx');
   const cropPagePath = path.resolve(__dirname, '../CropDashboardPage.tsx');
@@ -11,19 +11,19 @@ describe('Crop Dashboard Phase 2 Specification Compliance', () => {
   const dashboardContent = fs.readFileSync(dashboardPath, 'utf-8');
   const cropPageContent = fs.readFileSync(cropPagePath, 'utf-8');
 
-  it('labels Crop Dashboard with PHASE 2 badge in Topbar', () => {
-    expect(topbarContent).toContain('PHASE 2');
+  it('renders Crop Dashboard link in Topbar without Phase 2 badge', () => {
+    expect(topbarContent).not.toContain('PHASE 2');
     expect(topbarContent).toContain('/crop-dashboard');
   });
 
-  it('labels Crop Analytics with PHASE 2 PREVIEW badge in Dashboard', () => {
-    expect(dashboardContent).toContain('PHASE 2 PREVIEW');
-    expect(dashboardContent).toContain('Explore Crop Analytics (Phase 2)');
+  it('renders Crop Analytics card in Dashboard without Phase 2 / MVP preview labels', () => {
+    expect(dashboardContent).not.toContain('PHASE 2 PREVIEW');
+    expect(dashboardContent).toContain('Explore Crop Analytics');
   });
 
-  it('includes mandatory Phase 2 disclaimer banner in CropDashboardPage', () => {
-    expect(cropPageContent).toContain('PHASE 2 PREVIEW');
-    expect(cropPageContent).toContain('Crop intelligence capabilities are planned for a subsequent release and are not part of the current MVP');
-    expect(cropPageContent).toContain('Non-Contractual MVP Scope');
+  it('renders CropDashboardPage without Phase 2 / MVP disclaimer banner', () => {
+    expect(cropPageContent).not.toContain('PHASE 2 PREVIEW');
+    expect(cropPageContent).not.toContain('Non-Contractual MVP Scope');
+    expect(cropPageContent).not.toContain('Crop intelligence capabilities are planned for a subsequent release');
   });
 });
