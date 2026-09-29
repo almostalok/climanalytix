@@ -81,15 +81,15 @@ export const ClimateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [regions, setRegions] = useState<Region[]>([]);
   const [gridCells, setGridCells] = useState<GridCell[]>([]);
 
-  // Location (Default to Andhra Pradesh / Alluri Sitharama Raju matching reference)
+  // Location: Initially unselected matching "dont have filters filted on default"
   const [locationMode, setLocationMode] = useState<'region' | 'point'>('region');
-  const [selectedStateId, setSelectedStateIdState] = useState<string>('ap');
-  const [selectedDistrictId, setSelectedDistrictIdState] = useState<string>('ap_asr');
+  const [selectedStateId, setSelectedStateIdState] = useState<string>('');
+  const [selectedDistrictId, setSelectedDistrictIdState] = useState<string>('');
   const [selectedBlockId, setSelectedBlockIdState] = useState<string>('');
 
-  // Point coordinates
-  const [pointLat, setPointLat] = useState<number>(18.05);
-  const [pointLon, setPointLon] = useState<number>(82.25);
+  // Point coordinates (default to Delhi coordinates for coordinate dropper)
+  const [pointLat, setPointLat] = useState<number>(28.61);
+  const [pointLon, setPointLon] = useState<number>(77.20);
 
   // Date range (matching reference platform)
   const [startDate, setStartDate] = useState<string>('2026-09-21');
@@ -105,8 +105,8 @@ export const ClimateProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [tempBreakDays, setTempBreakDays] = useState<number>(0);
 
   const [normalPeriod, setNormalPeriod] = useState<10 | 20 | 30>(10);
-  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(true);
-  const [analysisTrigger, setAnalysisTrigger] = useState<number>(1);
+  const [hasAppliedFilters, setHasAppliedFilters] = useState<boolean>(false);
+  const [analysisTrigger, setAnalysisTrigger] = useState<number>(0);
 
   const triggerAnalysis = useCallback(() => {
     setHasAppliedFilters(true);

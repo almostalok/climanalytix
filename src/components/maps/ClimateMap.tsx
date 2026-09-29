@@ -9,6 +9,8 @@ export interface ViewState {
   zoom: number;
 }
 
+export type BasemapMode = 'satellite' | 'streets' | 'light' | 'dark';
+
 interface ClimateMapProps {
   title: string;
   type: 'actual' | 'normal' | 'anomaly';
@@ -22,6 +24,7 @@ interface ClimateMapProps {
   onViewStateChange?: (state: ViewState) => void;
   onMapClick?: (lat: number, lon: number) => void;
   unit: string;
+  basemap?: BasemapMode;
 }
 
 export const ClimateMap: React.FC<ClimateMapProps> = ({
@@ -36,9 +39,13 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
   onViewStateChange,
   onMapClick,
   unit,
+  basemap = 'satellite',
 }) => {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
+  const baseTileLayerRef = useRef<L.TileLayer | null>(null);
+  const overlayTileLayerRef = useRef<L.TileLayer | null>(null);
+  const roadsTileLayerRef = useRef<L.TileLayer | null>(null);
   const layerGroupRef = useRef<L.LayerGroup | null>(null);
   const isInternalMoveRef = useRef<boolean>(false);
 
@@ -49,22 +56,85 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       ? `Normal (${unit})`
       : 'Anomaly (%)';
 
-  // Initialize Leaflet map matching exact reference platform layout
+  // Helper to attach appropriate tile layers
+  const setupTileLayers = (map: L.Map, mode: BasemapMode) => {
+    // Remove existing tile layers
+    if (baseTileLayerRef.current) map.removeLayer(baseTileLayerRef.current);
+    if (overlayTileLayerRef.current) map.removeLayer(overlayTileLayerRef.current);
+    if (roadsTileLayerRef.current) map.removeLayer(roadsTileLayerRef.current);
+
+    if (mode === 'satellite') {
+      // 1. High-resolution Satellite Imagery
+      const base = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 18, attribution: 'Imagery &copy; Esri, Maxar, Earthstar Geographics' }
+      ).addTo(map);
+      baseTileLayerRef.current = base;
+
+      // 2. High-contrast Reference Overlay (City Names, District Names, State & National Boundaries)
+      const overlay = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 18, pane: 'overlayPane' }
+      ).addTo(map);
+      overlayTileLayerRef.current = overlay;
+
+      // 3. World Transportation (Roads & Highways)
+      const roads = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 18, pane: 'overlayPane', opacity: 0.65 }
+      ).addTo(map);
+      roadsTileLayerRef.current = roads;
+
+      base.bringToBack();
+    } else if (mode === 'streets') {
+      const base = L.tileLayer('https://tile.openstreetmap.org/{z}/{y}/{x}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors',
+      }).addTo(map);
+      baseTileLayerRef.current = base;
+      base.bringToBack();
+    } else if (mode === 'dark') {
+      const base = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 16, attribution: 'Tiles &copy; Esri' }
+      ).addTo(map);
+      baseTileLayerRef.current = base;
+
+      const overlay = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 16, pane: 'overlayPane' }
+      ).addTo(map);
+      overlayTileLayerRef.current = overlay;
+      base.bringToBack();
+    } else {
+      // Light canvas
+      const base = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 16, attribution: 'Tiles &copy; Esri' }
+      ).addTo(map);
+      baseTileLayerRef.current = base;
+
+      const overlay = L.tileLayer(
+        'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+        { maxZoom: 16, pane: 'overlayPane' }
+      ).addTo(map);
+      overlayTileLayerRef.current = overlay;
+      base.bringToBack();
+    }
+  };
+
+  // Initialize Leaflet map
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
       center: viewState.center,
       zoom: viewState.zoom,
-      zoomControl: true, // + and - at top-left matching reference screenshot
-      attributionControl: true, // Leaflet badge at bottom-right
+      zoomControl: true, // + and - at top-left
+      attributionControl: true,
     });
 
-    // High detail OpenStreetMap standard tile layer matching reference screenshot topography & borders
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{y}/{x}.png', {
-      maxZoom: 18,
-      attribution: '&copy; OpenStreetMap contributors',
-    }).addTo(map);
+    setupTileLayers(map, basemap);
 
     // Dynamic layer group for district boundary & grid blocks
     const layerGroup = L.layerGroup().addTo(map);
@@ -99,6 +169,13 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       mapInstanceRef.current = null;
     };
   }, []);
+
+  // Sync basemap mode updates
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    setupTileLayers(map, basemap);
+  }, [basemap]);
 
   // Sync viewport changes between maps
   useEffect(() => {
@@ -138,9 +215,9 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
 
         const rect = L.rectangle(block.bounds, {
           color: '#1E293B',
-          weight: 0.6,
+          weight: 0.8,
           fillColor,
-          fillOpacity: 0.78,
+          fillOpacity: 0.82,
         });
 
         const tooltipVal =
@@ -151,12 +228,12 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
             : `<strong>${block.anomalyPct >= 0 ? '+' : ''}${block.anomalyPct}%</strong>`;
 
         const popupContent = `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1.4; min-width: 150px;">
-            <div style="font-weight: 700; color: #111827; border-bottom: 1px solid #E5E7EB; padding-bottom: 3px; margin-bottom: 3px;">
+          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1.4; min-width: 160px;">
+            <div style="font-weight: 700; color: #111827; border-bottom: 1px solid #E5E7EB; padding-bottom: 4px; margin-bottom: 4px;">
               ${districtGIS.name}
             </div>
-            <div style="color: #4B5563;">${block.lat.toFixed(2)}°N, ${block.lon.toFixed(2)}°E</div>
-            <div style="margin-top: 3px; color: #1E40AF;">
+            <div style="color: #4B5563; font-size: 11px;">Grid Cell: ${block.lat.toFixed(2)}°N, ${block.lon.toFixed(2)}°E</div>
+            <div style="margin-top: 4px; color: #1E40AF; font-size: 12px;">
               ${badgeTitle}: ${tooltipVal}
             </div>
           </div>
@@ -169,50 +246,37 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
       if (districtGIS.polygon && districtGIS.polygon.length > 0) {
         const poly = L.polygon(districtGIS.polygon, {
           color: '#000000',
-          weight: 2.2,
+          weight: 2.5,
           fill: false,
-          opacity: 0.95,
+          opacity: 1.0,
         });
         poly.addTo(group);
       }
       return;
     }
 
-    // 2. Otherwise render standard national/state grid cells
+    // 2. Default state: render all national observation nodes with clean indicators
     gridPoints.forEach((point) => {
       const isSelected = point.id === selectedGridId;
-      const halfRes = 0.25 / 2;
-      const bounds: L.LatLngBoundsExpression = [
-        [point.lat - halfRes, point.lon - halfRes],
-        [point.lat + halfRes, point.lon + halfRes],
-      ];
-
-      const valForColor =
-        type === 'anomaly'
-          ? typeof point.anomalyPct === 'number'
-            ? point.anomalyPct
-            : 0
-          : type === 'normal'
-          ? point.normal
-          : point.value;
-
-      let fillColor = '#38BDF8';
-      if (type === 'anomaly') {
-        fillColor = valForColor >= 60 ? '#1D4ED8' : valForColor >= 20 ? '#38BDF8' : valForColor >= -19 ? '#E2E8F0' : '#F97316';
-      } else if (type === 'normal') {
-        fillColor = valForColor > 100 ? '#EF4444' : '#F87171';
-      } else {
-        fillColor = valForColor > 250 ? '#2563EB' : valForColor > 150 ? '#22C55E' : '#FBBF24';
-      }
-
-      const rect = L.rectangle(bounds, {
-        color: isSelected ? '#1E40AF' : '#64748B',
-        weight: isSelected ? 2 : 0.8,
-        fillColor,
-        fillOpacity: 0.75,
+      const marker = L.circleMarker([point.lat, point.lon], {
+        radius: isSelected ? 8 : 4.5,
+        color: isSelected ? '#FFFFFF' : '#3B82F6',
+        weight: isSelected ? 2.5 : 1.2,
+        fillColor: isSelected ? '#2563EB' : '#60A5FA',
+        fillOpacity: isSelected ? 1.0 : 0.65,
       });
 
-      rect.addTo(group);
+      const popupContent = `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px; line-height: 1.4; min-width: 140px;">
+          <div style="font-weight: 700; color: #111827;">${point.regionName}</div>
+          <div style="font-size: 11px; color: #6B7280;">${point.lat.toFixed(2)}°N, ${point.lon.toFixed(2)}°E</div>
+          <div style="margin-top: 4px; color: #1E40AF; font-weight: 600;">
+            ${badgeTitle}: ${point.value} ${unit}
+          </div>
+        </div>
+      `;
+      marker.bindTooltip(popupContent, { sticky: true });
+      marker.addTo(group);
     });
   }, [districtGIS, gridPoints, selectedGridId, type, variable, dataset, date, unit, badgeTitle]);
 
@@ -220,12 +284,12 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
     <div
       style={{
         position: 'relative',
-        background: '#FFFFFF',
+        background: '#0F172A',
         border: '1px solid #E5E7EB',
-        borderRadius: 6,
+        borderRadius: 8,
         overflow: 'hidden',
-        height: '460px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+        height: '480px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.06)',
       }}
     >
       {/* Floating White Pill Header Title matching reference platform */}
@@ -236,10 +300,10 @@ export const ClimateMap: React.FC<ClimateMapProps> = ({
           left: '50%',
           transform: 'translateX(-50%)',
           background: '#FFFFFF',
-          border: '1px solid #E5E7EB',
+          border: '1px solid #D1D5DB',
           borderRadius: 6,
-          padding: '6px 20px',
-          boxShadow: '0 2px 6px rgba(0,0,0,0.08)',
+          padding: '6px 22px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
           zIndex: 999,
           fontSize: 13,
           fontWeight: 700,

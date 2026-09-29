@@ -72,8 +72,11 @@ export const TempVisualizationPage: React.FC = () => {
       const dist = regions.find((r) => r.id === selectedDistrictId);
       return getDistrictGISData(selectedDistrictId, dist?.centroid, dist?.name);
     }
-    if (selectedStateId === 'ap' || !selectedStateId) {
-      return getDistrictGISData('ap_asr', [18.05, 82.25], 'Alluri Sitharama Raju');
+    if (selectedStateId) {
+      const stateDistricts = regions.filter((r) => r.type === 'district' && r.parentId === selectedStateId);
+      if (stateDistricts.length > 0) {
+        return getDistrictGISData(stateDistricts[0].id, stateDistricts[0].centroid, stateDistricts[0].name);
+      }
     }
     return null;
   }, [selectedDistrictId, selectedStateId, regions]);
@@ -82,16 +85,18 @@ export const TempVisualizationPage: React.FC = () => {
     if (districtGIS && districtGIS.centroid) {
       return districtGIS.centroid;
     }
-    if (resolvedGridCell && resolvedGridCell.lat && resolvedGridCell.lon) {
-      return [resolvedGridCell.lat, resolvedGridCell.lon];
+    if (selectedStateId) {
+      const stateObj = regions.find((r) => r.id === selectedStateId);
+      if (stateObj?.centroid) return stateObj.centroid;
     }
-    return [18.05, 82.25];
-  }, [districtGIS, resolvedGridCell]);
+    return [22.8, 79.5];
+  }, [districtGIS, selectedStateId, regions]);
 
   const targetZoom = useMemo<number>(() => {
-    if (districtGIS) return districtGIS.zoom;
-    return 7;
-  }, [districtGIS]);
+    if (districtGIS) return districtGIS.zoom || 8;
+    if (selectedStateId) return 6;
+    return 5;
+  }, [districtGIS, selectedStateId]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
